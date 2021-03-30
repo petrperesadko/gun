@@ -5,9 +5,13 @@ import math as m
 WIDTH = 800
 HEIGHT = 650
 FPS = 60
+pygame.init()
 
 # --------------------------
 # Функция сложения векторов
+
+font = pygame.font.Font( "arial.ttf" , 32)
+
 
 
 def add_vectors(angle1, length1, angle2, length2):
@@ -22,7 +26,6 @@ def add_vectors(angle1, length1, angle2, length2):
 
 
 def collide(p1, p2):
-
     dx = p1.x - p2.x
     dy = p1.y - p2.y
     dist = m.hypot(dx, dy)
@@ -87,8 +90,8 @@ class Bullet(pygame.sprite.Sprite):
         self.speed = speed
         self.top_speed = speed
         self.size = 10
-        self.elasticity = 0.9
-        self.drag = 0.999
+        self.elasticity = 0.8
+        self.drag = 0.995
 
     def display(self):
         pygame.draw.circle(screen, colors.BLACK, (self.x, self.y), self.size)
@@ -118,6 +121,7 @@ class Bullet(pygame.sprite.Sprite):
             self.y = 2 * (HEIGHT - self.size) - self.y
             self.alpha = m.pi - self.alpha
             self.speed *= self.elasticity
+            self.speed *= self.elasticity
 
         elif self.y <= self.size:
             self.y = 2 * self.size - self.y
@@ -127,93 +131,96 @@ class Bullet(pygame.sprite.Sprite):
 # --------------------------
 # Создание игры
 
-
-pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("My Game")
 clock = pygame.time.Clock()
-running = True
-#
-# --------------------------
-# Создание объектов
 
-bullets = []
-group = pygame.sprite.Group
-bullet1 = Bullet(100, 550, 20, m.pi / 4)
-bullets.append(bullet1)
+# --------------------------
+
 cannon = Cannon(20, m.pi/2)
 
 # --------------------------
-counter = 0
-number_of_hits = 0
-moved = True
-started = False
-down = False
-start_time = 0
-end_time = 0
-sec = 0
+running = True
 game = True
 # --------------------------
 # Цикл игры
 while game:
-    target = Target(random.randint(500, WIDTH - 50), random.randint(500, HEIGHT - 50), random.randint(10, 30))
+    target = Target(random.randint(500, WIDTH - 50), random.randint(500, HEIGHT - 50), random.randint(20, 30))
+    bullets = []
+    # group = pygame.sprite.Group
+    bullet1 = Bullet(100, 550, 0, 0)
+    bullets.append(bullet1)
+    counter = 0
+    number_of_hits = 0
+    moved = True
+    started = False
+    down = False
+    start_time = 0
+    end_time = 0
+    sec = 0
+    collided = False
     while running:
         clock.tick(FPS)
-
         SPEED = 0
         (mouseX, mouseY) = (0, 0)
         mouse = False
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
                 game = False
+                running = False
+
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 start_time = pygame.time.get_ticks()
-                (mouseX, mouseY) = pygame.mouse.get_pos()
                 started = True
                 down = False
-                # print("start: ", start_time)
             elif event.type == pygame.MOUSEBUTTONUP:
                 end_time = pygame.time.get_ticks()
+                (mouseX, mouseY) = pygame.mouse.get_pos()
                 started = False
                 down = True
-                # print("end: ", end_time)
+                sec = 0
             if event.type == pygame.MOUSEMOTION:
                 moved = True
             else:
                 moved = False
             if down and not moved:
                 sec = end_time - start_time
-                # print(sec)
 
-        if started:
-            started = False
+        if down and not started:
+            started = True
             angle = m.atan((550 - mouseY) / (mouseX - 100))
             bullet = Bullet(100, 550, 5 + sec / 100, m.pi / 2 - angle)
-            # group.add()
+            print(f"bullet {counter + 1} speed is {sec}")
             bullets.append(bullet)
             counter += 1
             number_of_hits += 1
 
-        if down:
+        if down and counter > 0:
             bullets[counter].move()
             bullets[counter].bounce()
             bullets[counter].display()
 
+
         cannon.display()
         target.display()
+
 
         if counter > 0:
             if collide(bullets[counter], target):
                 print("you killed the target in ", number_of_hits, " hits")
-                number_of_hits = 0
                 running = False
-
-        # for i, target in enumerate(targets):
-        #     collide(bullets[counter], targets[i])
-        #     targets[i].display()
+                collided = True
 
         pygame.display.flip()
         screen.fill(colors.THISTLE)
+
     running = True
+
+    text = font.render(f'You killed the target in {number_of_hits} hits!', colors.GREEN, colors.BLUE)
+    textRect = text.get_rect()
+    textRect.center = (WIDTH // 2, HEIGHT // 2)
+    screen.blit(text, textRect)
+    pygame.display.flip()
+    pygame.time.delay(1000)
+
 pygame.quit()
